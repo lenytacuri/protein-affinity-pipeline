@@ -1,0 +1,22 @@
+version: 2
+sources:
+  - name: raw
+    database: "{{ env_var('SNOWFLAKE_DATABASE') }}"
+    schema: RAW
+    description: Originales ingeridos. Bronze los consulta sin actualizarlos.
+    tables:
+      - name: source_records
+        identifier: SOURCE_RECORDS
+        description: Una fila por archivo de origen, hoja y numero de fila.
+      - name: rcsb_entries
+        identifier: RCSB_ENTRIES
+        description: Una respuesta JSON RCSB por huella de contenido.
+      - name: resource_files
+        identifier: RESOURCE_FILES
+        description: Hash y ubicacion de los archivos originales en el stage.
+      - name: batch_resources
+        identifier: BATCH_RESOURCES
+        description: Resultado de descarga por lote, PDB y tipo de recurso; incluye 404.
+      - name: ingestion_batches
+        identifier: INGESTION_BATCHES
+        description: Lotes cargados y version del archivo de entrada.

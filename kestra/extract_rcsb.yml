@@ -1,0 +1,41 @@
+id: extract_rcsb
+namespace: protein.affinity
+description: Extrae todos los registros principales y sus entradas RCSB. Sin AlphaFold.
+inputs:
+  - id: input_mode
+    type: SELECT
+    values: [excel, ids]
+    defaults: excel
+  - id: input_path
+    type: STRING
+    defaults: /workspace/data/reference/PPB-Affinity.zenodo-14271435.xlsx
+  - id: refresh
+    type: BOOL
+    defaults: false
+concurrency:
+  limit: 1
+  behavior: QUEUE
+tasks:
+  - id: extract
+    type: io.kestra.plugin.scripts.shell.Commands
+    containerImage: protein-affinity-pset2-runner:local
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+      volumes:
+        - "{{ envs.project_dir }}:/workspace"
+    env:
+      EXTRACTION_MODE: "{{ inputs.input_mode }}"
+      EXTRACTION_INPUT: "{{ inputs.input_path }}"
+      RCSB_REFRESH: "{{ inputs.refresh }}"
+    commands:
+      - python /workspace/scripts/extract_rcsb.py --mode "$EXTRACTION_MODE" --input "$EXTRACTION_INPUT" --output /workspace/data/rcsb
+    retry:
+      type: constant
+      interval: PT30S
+      maxAttempts: 2
+errors:
+  - id: report_failure
+    type: io.kestra.plugin.core.log.Log
+    level: ERROR
+    message: La extraccion tuvo fallos tecnicos. Consultar summary.json y download_manifest.jsonl; la cache permite reanudar.

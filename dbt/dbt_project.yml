@@ -1,0 +1,45 @@
+name: protein_affinity
+version: '1.0.0'
+config-version: 2
+profile: protein_affinity
+model-paths: [models]
+test-paths: [tests]
+macro-paths: [macros]
+clean-targets: [target, dbt_packages]
+models:
+  protein_affinity:
+    bronze:
+      +schema: BRONZE
+      +materialized: table
+      +tags: [bronze]
+      +persist_docs:
+        relation: true
+        columns: true
+
+    silver:
+      +schema: SILVER
+      +materialized: table
+      +tags: [silver]
+      +persist_docs:
+        relation: true
+        columns: true
+
+    backbone:
+      +schema: SILVER
+      +materialized: table
+      +tags: [backbone]
+      +persist_docs:
+        relation: true
+        columns: true
+
+    gold:
+      +schema: GOLD
+      +materialized: table
+      +tags: [gold]
+      +persist_docs:
+        relation: true
+        columns: true
+
+# Las pruebas usan el esquema existente; no crean DBT_TEST__AUDIT.
+data_tests:
+  +schema: BRONZE

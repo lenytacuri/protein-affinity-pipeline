@@ -1,0 +1,37 @@
+.env
+.venv/
+__pycache__/
+.DS_Store
+data/
+reports/
+dbt/target/
+dbt/logs/
+.secrets/
+sql/*.local.sql
+dbt/.user.yml
+dbt/dbt_packages/
+
+# Credenciales y configuracion local (solo la plantilla se versiona).
+.env.*
+!.env.example
+*.p8
+*.pem
+*.key
+
+# Datos descargados o derivados, aunque se guarden fuera de data/.
+*.pdb
+*.cif
+*.mmcif
+*.gz
+*.zip
+*.xlsx
+*.xls
+*.parquet
+*.arrow
+*.duckdb
+*.sqlite
+*.sqlite3
+*.log
+.pytest_cache/
+.ruff_cache/
+.vscode/

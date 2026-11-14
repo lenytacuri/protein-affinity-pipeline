@@ -1,0 +1,204 @@
+id: affinity_pipeline
+namespace: protein.affinity
+description: Lote curado bajo demanda, desde RCSB hasta OBT validada. Sin AlphaFold ni cron.
+inputs:
+  - id: mode
+    type: SELECT
+    values: [reference, curated, replay]
+    defaults: reference
+  - id: input_path
+    type: STRING
+    defaults: ""
+  - id: refresh
+    type: BOOL
+    defaults: false
+concurrency:
+  limit: 1
+  behavior: QUEUE
+tasks:
+  - id: prepare
+    type: io.kestra.plugin.scripts.shell.Commands
+    containerImage: protein-affinity-pset2-runner:local
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+      volumes:
+        - "{{ envs.project_dir }}:/workspace"
+    env:
+      PIPELINE_EXECUTION_ID: "{{ execution.id }}"
+      PIPELINE_MODE: "{{ inputs.mode }}"
+      PIPELINE_INPUT: "{{ inputs.input_path }}"
+      RCSB_REFRESH: "{{ inputs.refresh }}"
+    commands:
+      - python /workspace/scripts/pipeline_stage.py prepare
+    retry:
+      type: constant
+      interval: PT30S
+      maxAttempts: 2
+  - id: extract
+    type: io.kestra.plugin.scripts.shell.Commands
+    containerImage: protein-affinity-pset2-runner:local
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+      volumes:
+        - "{{ envs.project_dir }}:/workspace"
+    env:
+      PIPELINE_EXECUTION_ID: "{{ execution.id }}"
+    commands:
+      - python /workspace/scripts/pipeline_stage.py extract
+    retry:
+      type: constant
+      interval: PT30S
+      maxAttempts: 2
+  - id: raw
+    type: io.kestra.plugin.scripts.shell.Commands
+    containerImage: protein-affinity-pset2-runner:local
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+      volumes:
+        - "{{ envs.project_dir }}:/workspace"
+    env:
+      PIPELINE_EXECUTION_ID: "{{ execution.id }}"
+    commands:
+      - python /workspace/scripts/pipeline_stage.py raw
+    retry:
+      type: constant
+      interval: PT30S
+      maxAttempts: 2
+  - id: profile
+    type: io.kestra.plugin.scripts.shell.Commands
+    containerImage: protein-affinity-pset2-runner:local
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+      volumes:
+        - "{{ envs.project_dir }}:/workspace"
+    env:
+      PIPELINE_EXECUTION_ID: "{{ execution.id }}"
+    commands:
+      - python /workspace/scripts/pipeline_stage.py profile
+    retry:
+      type: constant
+      interval: PT30S
+      maxAttempts: 2
+  - id: bronze
+    type: io.kestra.plugin.scripts.shell.Commands
+    containerImage: protein-affinity-pset2-dbt:local
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+      volumes:
+        - "{{ envs.project_dir }}:/workspace"
+    env:
+      PIPELINE_EXECUTION_ID: "{{ execution.id }}"
+    commands:
+      - python /workspace/scripts/pipeline_stage.py bronze
+    retry:
+      type: constant
+      interval: PT30S
+      maxAttempts: 2
+  - id: silver
+    type: io.kestra.plugin.scripts.shell.Commands
+    containerImage: protein-affinity-pset2-geometry:local
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+      volumes:
+        - "{{ envs.project_dir }}:/workspace"
+    env:
+      PIPELINE_EXECUTION_ID: "{{ execution.id }}"
+    commands:
+      - python /workspace/scripts/pipeline_stage.py silver
+    retry:
+      type: constant
+      interval: PT30S
+      maxAttempts: 2
+  - id: backbone
+    type: io.kestra.plugin.scripts.shell.Commands
+    containerImage: protein-affinity-pset2-geometry:local
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+      volumes:
+        - "{{ envs.project_dir }}:/workspace"
+    env:
+      PIPELINE_EXECUTION_ID: "{{ execution.id }}"
+    commands:
+      - python /workspace/scripts/pipeline_stage.py backbone
+    retry:
+      type: constant
+      interval: PT30S
+      maxAttempts: 2
+  - id: gold
+    type: io.kestra.plugin.scripts.shell.Commands
+    containerImage: protein-affinity-pset2-geometry:local
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+      volumes:
+        - "{{ envs.project_dir }}:/workspace"
+    env:
+      PIPELINE_EXECUTION_ID: "{{ execution.id }}"
+    commands:
+      - python /workspace/scripts/pipeline_stage.py gold
+    retry:
+      type: constant
+      interval: PT30S
+      maxAttempts: 2
+  - id: obt
+    type: io.kestra.plugin.scripts.shell.Commands
+    containerImage: protein-affinity-pset2-spark:local
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+      volumes:
+        - "{{ envs.project_dir }}:/workspace"
+    env:
+      PIPELINE_EXECUTION_ID: "{{ execution.id }}"
+      SPARK_MASTER: "local[8]"
+      SPARK_SHUFFLE_PARTITIONS: "8"
+    commands:
+      - python /workspace/scripts/pipeline_stage.py obt
+    retry:
+      type: constant
+      interval: PT30S
+      maxAttempts: 2
+  - id: dictionary
+    type: io.kestra.plugin.scripts.shell.Commands
+    containerImage: protein-affinity-pset2-runner:local
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+      volumes:
+        - "{{ envs.project_dir }}:/workspace"
+    env:
+      PIPELINE_EXECUTION_ID: "{{ execution.id }}"
+    commands:
+      - python /workspace/scripts/pipeline_stage.py dictionary
+    retry:
+      type: constant
+      interval: PT30S
+      maxAttempts: 2
+  - id: finish
+    type: io.kestra.plugin.scripts.shell.Commands
+    containerImage: protein-affinity-pset2-runner:local
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+      volumes:
+        - "{{ envs.project_dir }}:/workspace"
+    env:
+      PIPELINE_EXECUTION_ID: "{{ execution.id }}"
+    commands:
+      - python /workspace/scripts/pipeline_stage.py finish
+    retry:
+      type: constant
+      interval: PT30S
+      maxAttempts: 2
+errors:
+  - id: report_failure
+    type: io.kestra.plugin.core.log.Log
+    level: ERROR
+    message: "Pipeline detenido. Revisar la tarea fallida y reports/pipeline/{{ execution.id }}. No ejecutar etapas posteriores manualmente."

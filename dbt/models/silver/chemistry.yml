@@ -1,0 +1,42 @@
+version: 2
+models:
+  - name: silver_interface_chemistry
+    description: Composicion y propiedades por geometria y participante de los residuos observados seleccionados por Q1. No aplica mutaciones del Excel ni calcula carga real, energia o enlaces. Las fracciones usan solo residuos canonicos soportados; PROPERTY_COVERAGE informa cobertura.
+    columns:
+      - name: chemistry_id
+        data_tests: [unique, not_null]
+      - name: geometry_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('silver_structure_geometry')
+                field: geometry_id
+      - name: partner
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [L, R]
+      - name: chemistry_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [complete, partial_coverage, no_supported_residues, empty_selection, geometry_unavailable]
+      - name: n_selected
+        description: Residuos seleccionados Q1. Cero indica seleccion vacia; NULL significa geometria no disponible.
+      - name: n_supported
+        description: Residuos estandar con nombre de tres letras y codigo compatibles con la tabla de 20 aminoacidos.
+      - name: property_coverage
+        description: N_SUPPORTED/N_SELECTED. Las fracciones quimicas tienen denominador N_SUPPORTED, no N_SELECTED.
+      - name: mean_kd_hydropathy
+        description: Media de la escala de Kyte-Doolittle entre residuos soportados seleccionados. KD aqui significa Kyte-Doolittle, no Kd de afinidad.
+      - name: aa_entropy_bits
+        description: Diversidad composicional de Shannon en bits; no es entropia termodinamica.
+      - name: n_basic
+        description: Cantidad de K,R,H por identidad; no numero de cargas positivas medidas. Histidina depende de pH y entorno.
+      - name: n_acidic
+        description: Cantidad de D,E por identidad; no carga neta medida.
+      - name: n_aromatic_ring
+        description: F,W,Y,H; incluye el anillo aromatico de histidina. Grupo solapado con las clases de polaridad.

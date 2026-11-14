@@ -1,0 +1,26 @@
+id: profile_raw
+namespace: protein.affinity
+description: Perfil SQL previo a limpieza. Genera reporte local y comprueba que RAW no cambia.
+concurrency:
+  limit: 1
+  behavior: QUEUE
+tasks:
+  - id: profile
+    type: io.kestra.plugin.scripts.shell.Commands
+    containerImage: protein-affinity-pset2-runner:local
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+      volumes:
+        - "{{ envs.project_dir }}:/workspace"
+    commands:
+      - python /workspace/scripts/profile_raw.py
+    retry:
+      type: constant
+      interval: PT30S
+      maxAttempts: 2
+errors:
+  - id: report_failure
+    type: io.kestra.plugin.core.log.Log
+    level: ERROR
+    message: El perfil fallo. Revisar la consulta indicada en el log; RAW no se limpia en este flujo.

@@ -1,0 +1,23 @@
+id: check_snowflake_connection
+namespace: protein.affinity
+description: Comprueba acceso de solo lectura desde un contenedor coordinado por Kestra.
+tasks:
+  - id: check
+    type: io.kestra.plugin.scripts.shell.Commands
+    containerImage: protein-affinity-pset2-runner:local
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+      volumes:
+        - "{{ envs.project_dir }}:/workspace:ro"
+    commands:
+      - python /workspace/scripts/check_snowflake.py
+    retry:
+      type: constant
+      interval: PT15S
+      maxAttempts: 3
+errors:
+  - id: report_failure
+    type: io.kestra.plugin.core.log.Log
+    level: ERROR
+    message: Fallo de conexion. Revisar credencial, permisos y conectividad en la tarea check.

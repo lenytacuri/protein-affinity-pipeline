@@ -1,0 +1,130 @@
+version: 2
+models:
+  - name: bronze_affinity_observations
+    description: >-
+      Una fila por observacion original del Excel. Conserva todas las versiones y
+      los valores de origen en PAYLOAD. No elimina coincidencias ni imputa datos.
+    columns:
+      - name: observation_id
+        description: Clave tecnica heredada de RAW; identifica archivo, hoja y fila.
+        data_tests: [not_null, unique]
+      - name: source_sha256
+        description: Huella del Excel que permite distinguir sus versiones.
+        data_tests: [not_null]
+      - name: source_file
+        description: Nombre del archivo original.
+      - name: source_sheet
+        description: Hoja del Excel original.
+      - name: source_row
+        description: Numero de fila en el Excel; incluye la fila de encabezado al contar.
+      - name: source_dataset
+        description: Coleccion de origen, por ejemplo SKEMPI; no es la referencia bibliografica.
+        data_tests: [not_null]
+      - name: complex_id
+        description: Identificador del paper, que incluye estructura, cadenas, mutaciones y referencia de afinidad.
+        data_tests: [not_null]
+      - name: pdb_id
+        description: Codigo PDB de la estructura asociada. Puede repetirse entre observaciones.
+        data_tests: [not_null]
+      - name: pdb_id_raw
+        description: Valor original de la columna PDB del Excel.
+      - name: source_index_raw
+        description: Indice exportado del Excel, originalmente sin nombre de columna.
+      - name: ligand_chains_raw
+        description: Anotacion original del grupo de cadenas del ligando; no separada en listas aun.
+      - name: receptor_chains_raw
+        description: Anotacion original del grupo de cadenas del receptor.
+      - name: mutations_raw
+        description: Mutaciones anotadas. NULL no se interpreta automaticamente como tipo silvestre.
+      - name: ligand_name
+        description: Nombre del ligando en el Excel.
+      - name: receptor_name
+        description: Nombre del receptor en el Excel.
+      - name: kd_m
+        description: Kd en mol/L convertido a DOUBLE; si una entrada futura no es numerica, queda NULL y se conserva KD_M_RAW.
+      - name: kd_m_raw
+        description: Representacion textual del valor original de KD(M); PAYLOAD conserva ademas su tipo original.
+      - name: temperature_raw
+        description: Texto original de Temperature(K), incluidas anotaciones como 298(assumed).
+      - name: resolution_angstrom
+        description: Resolucion del Excel en angstroms convertida a DOUBLE, sin sustituirla por RCSB.
+      - name: resolution_angstrom_raw
+        description: Representacion textual de la resolucion original.
+      - name: affinity_method_raw
+        description: Metodo de afinidad original, incluidos NULL y Unknown.
+      - name: structure_method_raw
+        description: Metodo de determinacion de estructura original.
+      - name: affinity_reference_raw
+        description: Referencia de la afinidad, incluyendo textos como TBD o tesis.
+      - name: structure_reference_raw
+        description: Referencia bibliografica de la estructura; no confundir con la de afinidad.
+      - name: affinity_release_date_raw
+        description: Fecha de referencia de afinidad original, sin completar fechas parciales.
+      - name: structure_release_date_raw
+        description: Fecha de publicacion de la estructura en el Excel.
+      - name: subgroup_raw
+        description: Subgrupo anotado en la fuente, sin completar valores faltantes.
+      - name: payload
+        description: Todos los campos originales del Excel, sin limpieza, como VARIANT.
+        data_tests: [not_null]
+      - name: raw_loaded_at
+        description: Fecha de ingesta en RAW, no fecha del experimento.
+  - name: bronze_structure_metadata
+    description: Una fila por version del JSON de RCSB, identificada por hash; conserva PAYLOAD completo.
+    columns:
+      - name: metadata_sha256
+        description: Huella del contenido JSON original, no identificador de observacion experimental.
+        data_tests: [not_null, unique]
+      - name: pdb_id
+        data_tests: [not_null]
+        description: Entrada PDB descrita por el JSON.
+      - name: payload
+        data_tests: [not_null]
+        description: JSON completo, con todos sus metodos y valores de resolucion.
+      - name: resolution_angstrom
+        description: Primer valor de resolution_combined; PAYLOAD conserva la lista completa.
+      - name: protein_entity_count
+        description: Numero de entidades proteicas; no demuestra por si solo que haya una interfaz valida.
+      - name: polymer_chain_count
+        description: Numero de instancias polimericas depositadas; puede incluir polimeros no proteicos.
+      - name: experimental_method
+        description: Primer metodo experimental del JSON; PAYLOAD conserva los demas si hay varios.
+  - name: bronze_resource_receipts
+    description: Un resultado por lote, PDB y recurso; incluye recursos disponibles y no encontrados.
+    columns:
+      - name: batch_id
+        description: Lote de extraccion al que pertenece el resultado.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: source('raw', 'ingestion_batches')
+                field: batch_id
+      - name: source_sha256
+        description: Version de la entrada de ese lote, para evitar unir contra recursos de otro origen.
+        data_tests: [not_null]
+      - name: pdb_id
+        data_tests: [not_null]
+      - name: resource
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [entry, structure]
+      - name: download_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [cached, downloaded, not_found]
+      - name: content_sha256
+        description: Hash del recurso disponible; NULL para una descarga sin archivo.
+        data_tests:
+          - relationships:
+              arguments:
+                to: source('raw', 'resource_files')
+                field: content_sha256
+      - name: stage_path
+        description: Ubicacion del archivo original dentro de RAW.SOURCE_FILES; puede ser NULL.
+      - name: receipt
+        description: Resultado completo de descarga original, conservado para auditoria.

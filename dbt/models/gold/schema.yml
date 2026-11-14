@@ -1,0 +1,342 @@
+{
+  "version": 2,
+  "models": [
+    {
+      "name": "dim_source",
+      "description": "Version de archivo, hoja y dataset de procedencia. No etiqueta predictora.",
+      "columns": [
+        {
+          "name": "source_key",
+          "data_tests": [
+            {
+              "unique": {
+                "config": {
+                  "tags": [
+                    "gold"
+                  ]
+                }
+              }
+            },
+            {
+              "not_null": {
+                "config": {
+                  "tags": [
+                    "gold"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "dim_experiment",
+      "description": "Combinacion exacta de contexto reportado. No identifica un experimento biologico unico.",
+      "columns": [
+        {
+          "name": "experiment_key",
+          "data_tests": [
+            {
+              "unique": {
+                "config": {
+                  "tags": [
+                    "gold"
+                  ]
+                }
+              }
+            },
+            {
+              "not_null": {
+                "config": {
+                  "tags": [
+                    "gold"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "dim_geometry",
+      "description": "Archivo y grupos de cadenas; conserva geometrias fallidas.",
+      "columns": [
+        {
+          "name": "geometry_id",
+          "data_tests": [
+            {
+              "unique": {
+                "config": {
+                  "tags": [
+                    "gold"
+                  ]
+                }
+              }
+            },
+            {
+              "not_null": {
+                "config": {
+                  "tags": [
+                    "gold"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "dim_participant_features",
+      "description": "Geometria por participante L/R, con composicion y resumen de backbone.",
+      "columns": [
+        {
+          "name": "participant_key",
+          "data_tests": [
+            {
+              "unique": {
+                "config": {
+                  "tags": [
+                    "gold"
+                  ]
+                }
+              }
+            },
+            {
+              "not_null": {
+                "config": {
+                  "tags": [
+                    "gold"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "partner",
+          "data_tests": [
+            {
+              "not_null": {
+                "config": {
+                  "tags": [
+                    "gold"
+                  ]
+                }
+              }
+            },
+            {
+              "accepted_values": {
+                "arguments": {
+                  "values": [
+                    "L",
+                    "R"
+                  ]
+                },
+                "config": {
+                  "tags": [
+                    "gold"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "geometry_id",
+          "data_tests": [
+            {
+              "not_null": {
+                "config": {
+                  "tags": [
+                    "gold"
+                  ]
+                }
+              }
+            },
+            {
+              "relationships": {
+                "arguments": {
+                  "to": "ref('dim_geometry')",
+                  "field": "geometry_id"
+                },
+                "config": {
+                  "tags": [
+                    "gold"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "chem_chemistry_status",
+          "data_tests": [
+            {
+              "not_null": {
+                "config": {
+                  "tags": [
+                    "gold"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "backbone_backbone_status",
+          "data_tests": [
+            {
+              "not_null": {
+                "config": {
+                  "tags": [
+                    "gold"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "fact_affinity",
+      "description": "Una observacion original. Mantiene todas las mediciones sin deduplicar ni seleccionar train/test.",
+      "columns": [
+        {
+          "name": "observation_id",
+          "data_tests": [
+            {
+              "unique": {
+                "config": {
+                  "tags": [
+                    "gold"
+                  ]
+                }
+              }
+            },
+            {
+              "not_null": {
+                "config": {
+                  "tags": [
+                    "gold"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "source_key",
+          "data_tests": [
+            {
+              "not_null": {
+                "config": {
+                  "tags": [
+                    "gold"
+                  ]
+                }
+              }
+            },
+            {
+              "relationships": {
+                "arguments": {
+                  "to": "ref('dim_source')",
+                  "field": "source_key"
+                },
+                "config": {
+                  "tags": [
+                    "gold"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "experiment_key",
+          "data_tests": [
+            {
+              "not_null": {
+                "config": {
+                  "tags": [
+                    "gold"
+                  ]
+                }
+              }
+            },
+            {
+              "relationships": {
+                "arguments": {
+                  "to": "ref('dim_experiment')",
+                  "field": "experiment_key"
+                },
+                "config": {
+                  "tags": [
+                    "gold"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "geometry_id",
+          "data_tests": [
+            {
+              "relationships": {
+                "arguments": {
+                  "to": "ref('dim_geometry')",
+                  "field": "geometry_id"
+                },
+                "config": {
+                  "tags": [
+                    "gold"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "ligand_participant_key",
+          "data_tests": [
+            {
+              "relationships": {
+                "arguments": {
+                  "to": "ref('dim_participant_features')",
+                  "field": "participant_key"
+                },
+                "config": {
+                  "tags": [
+                    "gold"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "receptor_participant_key",
+          "data_tests": [
+            {
+              "relationships": {
+                "arguments": {
+                  "to": "ref('dim_participant_features')",
+                  "field": "participant_key"
+                },
+                "config": {
+                  "tags": [
+                    "gold"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

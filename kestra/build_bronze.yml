@@ -1,0 +1,26 @@
+id: build_bronze
+namespace: protein.affinity
+description: dbt crea Bronze, ejecuta pruebas y comprueba que repetirlo no cambia sus datos.
+concurrency:
+  limit: 1
+  behavior: QUEUE
+tasks:
+  - id: build
+    type: io.kestra.plugin.scripts.shell.Commands
+    containerImage: protein-affinity-pset2-dbt:local
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+      volumes:
+        - "{{ envs.project_dir }}:/workspace"
+    commands:
+      - python /workspace/scripts/run_bronze.py --verify-replay
+    retry:
+      type: constant
+      interval: PT30S
+      maxAttempts: 2
+errors:
+  - id: report_failure
+    type: io.kestra.plugin.core.log.Log
+    level: ERROR
+    message: Bronze no se considera validada. Revisar reports/bronze y los resultados dbt antes de pasar a Silver.

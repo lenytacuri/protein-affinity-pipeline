@@ -1,0 +1,117 @@
+version: 2
+models:
+- name: backbone_residues
+  description: Medidas del esqueleto por cada residuo Q1, ancladas al CA original;
+    incluye valores NULL y motivos cuando faltan atomos compatibles o enlaces peptidicos
+    verificables.
+  columns:
+  - name: residue_id
+    data_tests:
+    - unique:
+        config:
+          tags:
+          - backbone
+    - not_null:
+        config:
+          tags:
+          - backbone
+    - relationships:
+        arguments:
+          to: ref('silver_interface_residues')
+          field: residue_id
+        config:
+          tags:
+          - backbone
+  - name: geometry_id
+    data_tests:
+    - not_null:
+        config:
+          tags:
+          - backbone
+  - name: atoms
+    description: Coordenadas, altloc y ocupacion de los atomos usados, incluidos vecinos
+      no seleccionados.
+    data_tests:
+    - not_null:
+        config:
+          tags:
+          - backbone
+  - name: phi_deg
+    description: C anterior, N, CA, C del residuo actual. Grados; NULL si no calculable.
+  - name: psi_deg
+    description: N, CA, C actuales y N siguiente. Grados.
+  - name: omega_deg
+    description: CA y C actuales, N y CA siguientes; torsion del enlace saliente,
+      en grados.
+  - name: tau_deg
+    description: Angulo N-CA-C del residuo, en grados.
+  - name: peptide_cn_length
+    description: Distancia C actual a N siguiente en angstroms, solo si se verifica
+      continuidad y 0.8 <= C-N <= 1.8 A.
+  - name: altloc
+    description: Altloc del CA de la seleccion original; solo atomos con esta etiqueta
+      o compartidos sin etiqueta. Si CA no tiene etiqueta, solo atomos sin etiqueta.
+- name: backbone_features
+  description: Resumen por geometria y participante de las medidas de backbone de
+    Q1; incluye media seno/coseno, dispersion circular, medias/desviaciones de longitudes
+    y cobertura. No aplica mutaciones ni calcula estructuras secundarias.
+  columns:
+  - name: backbone_feature_id
+    data_tests:
+    - unique:
+        config:
+          tags:
+          - backbone
+    - not_null:
+        config:
+          tags:
+          - backbone
+  - name: geometry_id
+    data_tests:
+    - relationships:
+        arguments:
+          to: ref('silver_structure_geometry')
+          field: geometry_id
+        config:
+          tags:
+          - backbone
+  - name: partner
+    data_tests:
+    - not_null:
+        config:
+          tags:
+          - backbone
+    - accepted_values:
+        arguments:
+          values:
+          - L
+          - R
+        config:
+          tags:
+          - backbone
+  - name: backbone_status
+    data_tests:
+    - not_null:
+        config:
+          tags:
+          - backbone
+    - accepted_values:
+        arguments:
+          values:
+          - complete
+          - partial_angles
+          - no_valid_angles
+          - empty_selection
+          - geometry_unavailable
+        config:
+          tags:
+          - backbone
+  - name: phi_circular_variance
+    description: 1 menos longitud del vector medio; 0 concentrado, cercano a 1 disperso.
+      No es varianza en grados cuadrados.
+  - name: phi_circular_mean_deg
+    description: ATAN2(media seno, media coseno), en grados. NULL si vector medio
+      <= 1e-8 o no hay angulos validos.
+  - name: n_selected
+    description: Total de residuos seleccionados; las coberturas usan este denominador,
+      sin imputar angulos.

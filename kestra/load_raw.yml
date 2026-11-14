@@ -1,0 +1,31 @@
+id: load_raw
+namespace: protein.affinity
+description: Carga un batch ya extraido a Snowflake RAW y verifica que repetirlo no duplica filas.
+inputs:
+  - id: batch_path
+    type: STRING
+concurrency:
+  limit: 1
+  behavior: QUEUE
+tasks:
+  - id: load
+    type: io.kestra.plugin.scripts.shell.Commands
+    containerImage: protein-affinity-pset2-runner:local
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+      volumes:
+        - "{{ envs.project_dir }}:/workspace"
+    env:
+      RAW_BATCH_PATH: "{{ inputs.batch_path }}"
+    commands:
+      - python /workspace/scripts/load_raw.py --batch "$RAW_BATCH_PATH" --verify-replay
+    retry:
+      type: constant
+      interval: PT30S
+      maxAttempts: 2
+errors:
+  - id: report_failure
+    type: io.kestra.plugin.core.log.Log
+    level: ERROR
+    message: La carga RAW fallo. Se puede repetir el mismo batch; los archivos y filas ya cargados se reutilizan.

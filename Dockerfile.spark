@@ -1,0 +1,7 @@
+FROM protein-affinity-pset2-geometry:local
+RUN apt-get update && apt-get install -y --no-install-recommends openjdk-21-jre-headless procps && rm -rf /var/lib/apt/lists/* && ln -s /usr/lib/jvm/java-21-openjdk-$(dpkg --print-architecture) /opt/java
+COPY spark/requirements.txt /tmp/spark-requirements.txt
+RUN pip install --no-cache-dir -r /tmp/spark-requirements.txt
+ENV JAVA_HOME=/opt/java SPARK_LOCAL_IP=127.0.0.1 PYSPARK_PYTHON=python PYSPARK_SUBMIT_ARGS="--driver-memory 2g pyspark-shell"
+WORKDIR /workspace
+CMD ["python", "/workspace/spark/build_obt.py"]

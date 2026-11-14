@@ -1,0 +1,119 @@
+version: 2
+models:
+  - name: silver_affinity_observations
+    description: Todas las observaciones de Bronze con pKd, temperatura interpretada, referencias y estados estructurales. No elimina observaciones ni aplica mutaciones a las coordenadas.
+    columns:
+      - name: observation_id
+        data_tests: [unique, not_null]
+      - name: payload
+        description: Campos originales del Excel, preservados sin limpieza.
+        data_tests: [not_null]
+      - name: pkd
+        description: Menos logaritmo base 10 de Kd expresado en mol/L; es el objetivo experimental, no un predictor.
+      - name: temperature_k
+        description: Temperatura extraida del texto original; las asumidas estan marcadas y no se inventan ausentes.
+      - name: temperature_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [missing, unparsed, invalid, assumed, reported]
+      - name: kd_status
+        data_tests: [not_null]
+      - name: geometry_status
+        data_tests: [not_null]
+      - name: mutation_structure_status
+        description: Compara residuos anotados con los observados. not_annotated no demuestra tipo silvestre.
+        data_tests: [not_null]
+  - name: silver_structure_geometry
+    description: Un calculo por archivo, grupos de cadenas y version. Primer modelo depositado; ensamblaje biologico no validado. Composicion de residuos observados, sin modelar mutantes.
+    columns:
+      - name: geometry_id
+        data_tests: [unique, not_null]
+      - name: structure_sha256
+        data_tests: [not_null]
+      - name: geometry_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [computed, structure_not_usable]
+          - not_null
+      - name: q1_ligand_angstrom
+        description: Percentil 25 de distancias minimas CA del ligando al receptor, interpolacion lineal y seleccion estricta menor.
+      - name: q1_receptor_angstrom
+        description: Percentil 25 separado para el receptor. No representa percentil de todos los pares.
+      - name: composition_ligand_q1
+        description: Cantidades y fracciones de aminoacidos observados en la seleccion Q1 del ligando; vacios generan fracciones NULL.
+      - name: composition_receptor_q1
+        description: Cantidades y fracciones de aminoacidos observados en la seleccion Q1 del receptor.
+      - name: has_ca_contacts_10
+        description: Al menos un par CA separado menos de 10 A; no prueba interaccion biologica.
+  - name: silver_observation_geometry
+    description: Vinculo de cada observacion con geometria reutilizable; no fusiona mediciones experimentales.
+    columns:
+      - name: observation_id
+        data_tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('bronze_affinity_observations')
+                field: observation_id
+      - name: geometry_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('silver_structure_geometry')
+                field: geometry_id
+      - name: mutation_structure_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [not_annotated, structure_unavailable, target_residues_present, reference_geometry_only, needs_review]
+  - name: silver_interface_residues
+    description: Todos los residuos aminoacidos con CA utilizable de los participantes, con coordenadas, vecino mas cercano y banderas Q1 y referencia de 10 A. No solo seleccionados.
+    columns:
+      - name: residue_id
+        data_tests: [unique, not_null]
+      - name: geometry_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('silver_structure_geometry')
+                field: geometry_id
+      - name: partner
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [L, R]
+      - name: chain_id
+        description: Identificador de cadena de autor, sensible a mayusculas.
+      - name: insertion_code
+        description: Codigo de insercion junto al numero de residuo; cadena vacia cuando no existe.
+      - name: nearest_residue_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('silver_interface_residues')
+                field: residue_id
+      - name: selected_q1
+        description: Distancia minima estrictamente menor que Q1 de su participante; empates pueden producir una seleccion vacia.
+  - name: silver_residue_pairs
+    description: Todos los pares de CA entre los residuos seleccionados por Q1 de cada participante, sin umbral adicional de distancia. No implica contacto quimico ni enlace.
+    columns:
+      - name: pair_id
+        data_tests: [unique, not_null]
+      - name: ligand_residue_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('silver_interface_residues')
+                field: residue_id
+      - name: receptor_residue_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('silver_interface_residues')
+                field: residue_id
+      - name: distance_angstrom
+        data_tests: [not_null]

@@ -1,0 +1,17 @@
+**
+!Dockerfile
+!requirements.txt
+!scripts/
+!scripts/**
+
+!Dockerfile.dbt
+!dbt/
+!dbt/requirements.txt
+
+!Dockerfile.geometry
+!geometry/
+!geometry/requirements.txt
+
+!Dockerfile.spark
+!spark/
+!spark/requirements.txt

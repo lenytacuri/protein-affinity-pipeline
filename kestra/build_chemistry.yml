@@ -1,0 +1,21 @@
+id: build_chemistry
+namespace: protein.affinity
+description: Caracteristicas quimicas de los residuos Q1 existentes; SQL en Snowflake, sin recalcular geometria.
+concurrency:
+  limit: 1
+  behavior: QUEUE
+tasks:
+  - id: build
+    type: io.kestra.plugin.scripts.shell.Commands
+    containerImage: protein-affinity-pset2-geometry:local
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+      volumes:
+        - "{{ envs.project_dir }}:/workspace"
+    commands:
+      - python /workspace/scripts/build_chemistry.py
+    retry:
+      type: constant
+      interval: PT30S
+      maxAttempts: 2

@@ -1,0 +1,148 @@
+# Ingesta, dbt, calculo estructural y Spark local para la OBT.
+name: protein-affinity-pset2
+services:
+  audit:
+    profiles: [audit]
+    build: .
+    image: protein-affinity-pset2-runner:local
+    volumes:
+      # La carpeta superior contiene tus estructuras; solo podemos leerla.
+      - type: bind
+        source: ${PROTEIN_DATA_DIR:-..}
+        target: /data
+        read_only: true
+      - type: bind
+        source: ./data/reference
+        target: /reference
+        read_only: true
+      # Los informes sobreviven cuando termina el contenedor.
+      - type: bind
+        source: ./reports
+        target: /reports
+    network_mode: none
+  snowflake-check:
+    profiles: [setup]
+    build: .
+    image: protein-affinity-pset2-runner:local
+    command: [python, scripts/check_snowflake.py]
+    env_file: .env
+    environment:
+      SNOWFLAKE_PRIVATE_KEY_FILE: /run/secrets/snowflake_key.p8
+    volumes:
+      - type: bind
+        source: ./.secrets
+        target: /run/secrets
+        read_only: true
+  pipeline:
+    profiles: [jobs]
+    build: .
+    image: protein-affinity-pset2-runner:local
+    working_dir: /workspace
+    command: [python, scripts/check_snowflake.py]
+    env_file: .env
+    volumes:
+      - .:/workspace
+      - ${PROTEIN_DATA_DIR:-..}:/data:ro
+  dbt:
+    profiles: [jobs]
+    build:
+      context: .
+      dockerfile: Dockerfile.dbt
+    image: protein-affinity-pset2-dbt:local
+    working_dir: /workspace/dbt
+    command: [python, /workspace/scripts/run_bronze.py]
+    env_file: .env
+    environment:
+      DBT_SEND_ANONYMOUS_USAGE_STATS: 'false'
+    volumes:
+      - .:/workspace
+  geometry:
+    profiles: [jobs]
+    build:
+      context: .
+      dockerfile: Dockerfile.geometry
+    image: protein-affinity-pset2-geometry:local
+    working_dir: /workspace
+    env_file: .env
+    volumes:
+      - .:/workspace
+  spark:
+    profiles: [jobs]
+    build:
+      context: .
+      dockerfile: Dockerfile.spark
+    image: protein-affinity-pset2-spark:local
+    working_dir: /workspace
+    env_file: .env
+    environment:
+      SPARK_MASTER: local[8]
+      SPARK_SHUFFLE_PARTITIONS: '8'
+    volumes:
+      - .:/workspace
+  postgres:
+    image: postgres:17-bookworm@sha256:665dc7b37ac52a17e298511414c21d23ffa4e6a6ef6225b3e5d59c7afb35e994
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: kestra
+      POSTGRES_USER: kestra
+      POSTGRES_PASSWORD: ${KESTRA_POSTGRES_PASSWORD:?Configura .env}
+    volumes:
+      - kestra-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U kestra -d kestra']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  kestra:
+    image: kestra/kestra:latest@sha256:494d2e81aacd92c0353098822aa7214833f8b1ed7a8fe6b5a46b79b1caec3ec5
+    restart: unless-stopped
+    user: root
+    command: server standalone
+    stop_grace_period: 6m
+    ports:
+      - '127.0.0.1:8080:8080'
+    volumes:
+      - kestra-storage:/app/storage
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/ppa-kestra-wd:/tmp/ppa-kestra-wd
+    environment:
+      ENV_PROJECT_DIR: ${PPA_PROJECT_DIR:?Configura la ruta absoluta del proyecto en .env}
+      KESTRA_CONFIGURATION: |
+        datasources:
+          postgres:
+            url: jdbc:postgresql://postgres:5432/kestra
+            driverClassName: org.postgresql.Driver
+            username: kestra
+            password: ${KESTRA_POSTGRES_PASSWORD}
+        kestra:
+          server:
+            basic-auth:
+              username: ${KESTRA_USER}
+              password: ${KESTRA_PASSWORD}
+          anonymous-usage-report:
+            enabled: false
+          repository:
+            type: postgres
+          queue:
+            type: postgres
+          storage:
+            type: local
+            local:
+              base-path: /app/storage
+          tasks:
+            tmp-dir:
+              path: /tmp/ppa-kestra-wd/tmp
+          plugins:
+            configurations:
+              - type: io.kestra.plugin.scripts.runner.docker.Docker
+                values:
+                  volume-enabled: true
+          variables:
+            env-vars-prefix: ENV_
+          url: http://localhost:8080/
+    depends_on:
+      postgres:
+        condition: service_healthy
+volumes:
+  kestra-postgres:
+  kestra-storage:

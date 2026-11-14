@@ -1,0 +1,17 @@
+protein_affinity:
+  target: project
+  outputs:
+    project:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+      role: "{{ env_var('SNOWFLAKE_ROLE') }}"
+      warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE') }}"
+      database: "{{ env_var('SNOWFLAKE_DATABASE') }}"
+      schema: BRONZE
+      private_key_path: "{{ env_var('DBT_PRIVATE_KEY_PATH', '/workspace/.secrets/snowflake_key.p8') }}"
+      threads: 2
+      client_session_keep_alive: false
+      query_tag: protein-affinity-bronze
+      connect_retries: 2
+      connect_timeout: 30

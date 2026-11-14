@@ -1,0 +1,40 @@
+id: build_silver
+namespace: protein.affinity
+description: Silver completa; CPU local paralelo para CA y dbt para las tablas de Snowflake.
+concurrency:
+  limit: 1
+  behavior: QUEUE
+tasks:
+  - id: build
+    type: io.kestra.plugin.scripts.shell.Commands
+    containerImage: protein-affinity-pset2-geometry:local
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+      volumes:
+        - "{{ envs.project_dir }}:/workspace"
+    commands:
+      - python /workspace/scripts/run_silver.py --verify-replay
+    retry:
+      type: constant
+      interval: PT30S
+      maxAttempts: 2
+  - id: backbone
+    type: io.kestra.plugin.scripts.shell.Commands
+    containerImage: protein-affinity-pset2-geometry:local
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+      volumes:
+        - "{{ envs.project_dir }}:/workspace"
+    commands:
+      - python /workspace/scripts/build_backbone.py
+    retry:
+      type: constant
+      interval: PT30S
+      maxAttempts: 2
+errors:
+  - id: failure
+    type: io.kestra.plugin.core.log.Log
+    level: ERROR
+    message: Silver pendiente de validacion; revisar reports/silver antes de continuar a Gold.

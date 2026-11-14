@@ -1,0 +1,8 @@
+# Reutiliza la conexion a Snowflake y las dependencias ya fijadas del proyecto.
+FROM protein-affinity-pset2-dbt:local
+COPY geometry/requirements.txt /tmp/geometry-requirements.txt
+RUN pip install --no-cache-dir -r /tmp/geometry-requirements.txt
+WORKDIR /workspace
+# Un proceso por complejo; evita crear ocho hilos adicionales en cada proceso.
+ENV OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1
+CMD ["python", "/workspace/scripts/run_silver.py"]

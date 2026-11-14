@@ -1,0 +1,21 @@
+id: build_obt
+namespace: protein.affinity
+description: Spark local construye, valida y publica la OBT a partir de Gold.
+concurrency:
+  limit: 1
+  behavior: QUEUE
+tasks:
+  - id: build
+    type: io.kestra.plugin.scripts.shell.Commands
+    containerImage: protein-affinity-pset2-spark:local
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+      volumes:
+        - "{{ envs.project_dir }}:/workspace"
+    commands:
+      - python /workspace/spark/build_obt.py
+    retry:
+      type: constant
+      interval: PT30S
+      maxAttempts: 2

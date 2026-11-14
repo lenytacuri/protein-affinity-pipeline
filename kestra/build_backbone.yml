@@ -1,0 +1,21 @@
+id: build_backbone
+namespace: protein.affinity
+description: Geometria de backbone en ocho procesos locales disponibles y resumen dbt en Snowflake.
+concurrency:
+  limit: 1
+  behavior: QUEUE
+tasks:
+  - id: build
+    type: io.kestra.plugin.scripts.shell.Commands
+    containerImage: protein-affinity-pset2-geometry:local
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+      volumes:
+        - "{{ envs.project_dir }}:/workspace"
+    commands:
+      - python /workspace/scripts/build_backbone.py
+    retry:
+      type: constant
+      interval: PT30S
+      maxAttempts: 2
